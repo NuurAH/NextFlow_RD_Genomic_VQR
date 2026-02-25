@@ -1,14 +1,14 @@
 /*
  * Align reads to the indexed genome
  */
-process alignReadsBwaMem {
+process alignReadsBwaMem2 {
 
     if (params.platform == 'local') {
         label 'process_low'
     } else if (params.platform == 'cloud') {
         label 'process_high'
     }
-    container 'variantvalidator/indexgenome:1.1.0'
+    container 'custom/bwa-mem2:v2.3'
 
     tag "$sample_id"
 
@@ -21,23 +21,29 @@ process alignReadsBwaMem {
 
     script:
     """
+    # Auto-detect BWA index
     INDEX=\$(find -L ./ -name "*.amb" | sed 's/\\.amb\$//')
 
     echo "Running Align Reads"
     echo "\$INDEX"
 
-    # Check if the input FASTQ files exist
     if [ -f "${reads[0]}" ]; then
         if [ -f "${reads[1]}" ]; then
             # Paired-end mode
-            bwa mem -M -k 16 -t 4 \$INDEX ${reads[0]} ${reads[1]} |
-            samtools view -b - |
-            samtools addreplacerg -r "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" - > ${sample_id}.bam
+            bwa-mem2 mem \
+            -t 4 \
+            -k 16 \
+            -M \
+            -R "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" \
+            \$INDEX ${reads[0]} ${reads[1]} | samtools view -b - > ${sample_id}.bam
         else
             # Single FASTQ mode
-            bwa mem -M -k 16 -t 4 \$INDEX ${reads[0]} |
-            samtools view -b - |
-            samtools addreplacerg -r "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" - > ${sample_id}.bam
+            bwa-mem2 mem \
+            -t 4 \
+            -k 16 \
+            -M \
+            -R "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" \
+            \$INDEX ${reads[0]} | samtools view -b - > ${sample_id}.bam      
         fi
     else
         echo "Error: Read file ${reads[0]} does not exist for sample ${sample_id}."

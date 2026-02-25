@@ -1,0 +1,7 @@
+.nextflow.log.1
+.nextflow.log
+.nextflow.log*
+results
+data
+.nextflow
+work
