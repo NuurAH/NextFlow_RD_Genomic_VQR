@@ -9,9 +9,7 @@ log.info """\
     platform        : ${params.platform}
     samplesheet     : ${params.samplesheet}
     genome          : ${params.genome_file}
-    genome _2       : ${params.genome_file_2}
     genome index    : ${params.genome_index_files}
-    genome_index_2  : ${params.genome_index_files_2}
     bam_file        : ${params.bam_file}
     bam_index_file  : ${params.bam_index_file}
     index genome    : ${params.index_genome}
@@ -23,6 +21,7 @@ log.info """\
     variant caller  : ${params.variant_caller}
     bqsr            : ${params.bqsr}
     degraded_dna    : ${params.degraded_dna}
+    process GVCFs   : ${params.process_GVCFs}
     variant_recalibration: ${params.variant_recalibration}
     identity_analysis: ${params.identity_analysis}
     ============================================
@@ -44,8 +43,18 @@ include { indexBam } from './modules/indexBam'
 if (params.bqsr) {
     include { baseRecalibrator } from './modules/BQSR'
 }
+if (params.process_GVCFs == "gatk") {
 include { combineGVCFs } from './modules/processGVCFs'
 include { genotypeGVCFs } from './modules/processGVCFs'
+}else if (params.process_GVCFs == "glNexus"){
+include {combineGVCFs} from './modules/glNexusGVCFs'
+
+}else {
+    error "Unsupported GVCF processor: ${params.prorcess_GVCFs}. Please specify 'haplotype-caller' or 'deep-variant."
+}
+
+
+
 if (params.variant_recalibration) {
     include { variantRecalibrator } from './modules/variantRecalibrator'
 } else {
@@ -77,26 +86,17 @@ if (params.degraded_dna) {
 }
 
 workflow {
-    // User decides to use bwamem2
-    if (params.aligner == 'bwa-mem2') {
-        if (params.index_genome){
+    // 
+
+    if (params.index_genome){
         // Flatten as is of format [fasta, [rest of files..]]
-        indexed_genome_ch = indexGenome(params.genome_file_2).flatten()
-        }
-        else {
-            indexed_genome_ch = Channel.fromPath(params.genome_index_files_2)
-        }
-    }          
+        indexed_genome_ch = indexGenome(params.genome_file).flatten()
+    }
     else {
-        if (params.index_genome){
-            // Flatten as is of format [fasta, [rest of files..]]
-            indexed_genome_ch = indexGenome(params.genome_file).flatten()
-        }
-        else {
-            indexed_genome_ch = Channel.fromPath(params.genome_index_files)
-        }
-    } 
-    
+        indexed_genome_ch = Channel.fromPath(params.genome_index_files)
+    }
+
+
 
     // Create qsrc_vcf_ch channel
     qsrc_vcf_ch = Channel.fromPath(params.qsrVcfs)
@@ -191,36 +191,43 @@ workflow {
         }
 
     // Combine GVCFs
-    combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
-
-    // Run GenotypeGVCFs
+    if (params.process_GVCFs == "gatk") {
+    combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())  // Run GenotypeGVCFs
     final_vcf_ch = genotypeGVCFs(combined_gvcf_ch, indexed_genome_ch.collect())
+    }
+    else if (params.process_GVCFs == "glNexus"){
+    final_vcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
+    }
+
+
 
     // Conditionally apply variant recalibration or filtering
-    if (params.variant_recalibration) {
-        // Define a map of VCF files to resource options
-        def resourceOptions = [
-            'Homo_sapiens_assembly38.known_indels': 'known=true,training=false,truth=false,prior=15.0',  // High-priority known indels, not used for training
-            'hapmap_3.3.hg38': 'known=false,training=false,truth=true,prior=15.0',  // Good for truth, not training
-            '1000G_omni2.5.hg38': 'known=false,training=true,truth=false,prior=12.0',  // Omni SNPs, used for training
-            '1000G_phase1.snps.high_confidence.hg38': 'known=true,training=true,truth=true,prior=10.0',  // High confidence SNPs, both for training and truth
-            'Homo_sapiens_assembly38.dbsnp138': 'known=true,training=false,truth=false,prior=2.0',  // dbSNP, known but not for training
-            'Mills_and_1000G_gold_standard.indels.hg38': 'known=true,training=true,truth=true,prior=12.0'  // Gold standard indels, good for truth (indels)
-        ]
+    if (params.variant_caller == "haplotype-caller"){
+        if (params.variant_recalibration) {
+            // Define a map of VCF files to resource options
+            def resourceOptions = [
+                'Homo_sapiens_assembly38.known_indels': 'known=true,training=false,truth=false,prior=15.0',  // High-priority known indels, not used for training
+                'hapmap_3.3.hg38': 'known=false,training=false,truth=true,prior=15.0',  // Good for truth, not training
+                '1000G_omni2.5.hg38': 'known=false,training=true,truth=false,prior=12.0',  // Omni SNPs, used for training
+                '1000G_phase1.snps.high_confidence.hg38': 'known=true,training=true,truth=true,prior=10.0',  // High confidence SNPs, both for training and truth
+                'Homo_sapiens_assembly38.dbsnp138': 'known=true,training=false,truth=false,prior=2.0',  // dbSNP, known but not for training
+                'Mills_and_1000G_gold_standard.indels.hg38': 'known=true,training=true,truth=true,prior=12.0'  // Gold standard indels, good for truth (indels)
+            ]
 
-        // Generate --resource arguments
-        knownSitesArgs_ch = Channel
-            .fromPath(params.qsrVcfs)
-            .filter { file -> file.getName().endsWith('.vcf.gz') || file.getName().endsWith('.vcf') }
-            .map { file ->
-                def baseName = file.getName().replaceAll(/\.vcf(\.gz)?$/, '') // Remove .vcf.gz or .vcf
-                def resourceArgs = resourceOptions.get(baseName) ?: "" // Get attributes from resourceOptions
-                return "--resource:${baseName},${resourceArgs} ${file.getName()}" // Only the filename, no full path
-            }
-            .collect()
-        filtered_vcf_ch = variantRecalibrator(final_vcf_ch, knownSitesArgs_ch, indexed_genome_ch.collect(), qsrc_vcf_ch.collect())
-    } else {
-        filtered_vcf_ch = filterVCF(final_vcf_ch, indexed_genome_ch.collect())
+            // Generate --resource arguments
+            knownSitesArgs_ch = Channel
+                .fromPath(params.qsrVcfs)
+                .filter { file -> file.getName().endsWith('.vcf.gz') || file.getName().endsWith('.vcf') }
+                .map { file ->
+                    def baseName = file.getName().replaceAll(/\.vcf(\.gz)?$/, '') // Remove .vcf.gz or .vcf
+                    def resourceArgs = resourceOptions.get(baseName) ?: "" // Get attributes from resourceOptions
+                    return "--resource:${baseName},${resourceArgs} ${file.getName()}" // Only the filename, no full path
+                }
+                .collect()
+            filtered_vcf_ch = variantRecalibrator(final_vcf_ch, knownSitesArgs_ch, indexed_genome_ch.collect(), qsrc_vcf_ch.collect())
+        } else {
+            filtered_vcf_ch = filterVCF(final_vcf_ch, indexed_genome_ch.collect())
+        }
     }
 
     // Conditionally run identityAnalysis if identity_analysis is true
@@ -328,7 +335,7 @@ workflow variant_calling_only {
                 file(params.bam_index_file)
             )
         )
-        indexed_genome_ch = Channel.fromPath(params.genome_index_files_2)
+        indexed_genome_ch = Channel.fromPath(params.genome_index_files)
     if (params.variant_caller == "haplotype-caller") {
         gvcf_ch = haplotypeCaller(indexed_bam_ch, indexed_genome_ch.collect()).collect()
     } else if (params.variant_caller == "deep-variant") {
@@ -345,10 +352,13 @@ workflow variant_calling_only {
         }
 
     // Combine GVCFs
-    combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
-
-    // Run GenotypeGVCFs
+    if (params.process_GVCFs == "gatk") {
+    combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())  // Run GenotypeGVCFs
     final_vcf_ch = genotypeGVCFs(combined_gvcf_ch, indexed_genome_ch.collect())
+    }
+    else if (params.process_GVCFs == "glNexus"){
+    final_vcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
+    }
 
 }
 

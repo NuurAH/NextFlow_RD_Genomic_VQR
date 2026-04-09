@@ -20,9 +20,9 @@ process combineGVCFs {
 
     """
     echo "Combining GVCFs for samples: ${gvcf_files.collect { it.baseName }.join(', ')}"
-
-    genomeFasta="\$(find -L . -name '*.fasta')"
-
+    
+    genomeFasta=\$(find -L . -name '*.fa')
+   
     # Ensure dictionary exists
     if [[ -e "\${genomeFasta}.dict" ]]; then
         mv "\${genomeFasta}.dict" "\${genomeFasta%.*}.dict"
@@ -54,13 +54,11 @@ process genotypeGVCFs {
     def merged_sample_id = combined_gvcf.baseName
 
     """
-    echo "Genotyping combined GVCF: ${combined_gvcf.baseName}"
 
-    if [[ -n ${params.genome_file} ]]; then
-        genomeFasta=\$(basename ${params.genome_file})
-    else
-        genomeFasta=\$(find -L . -name '*.fasta')
-    fi
+    echo "Genotyping combined GVCF: ${combined_gvcf.baseName}"
+    
+    genomeFasta="\$(find -L . -name '*.fa')" 
+
 
     echo "Genome File: \${genomeFasta}"
 
@@ -68,6 +66,14 @@ process genotypeGVCFs {
     if [[ -e "\${genomeFasta}.dict" ]]; then
         mv "\${genomeFasta}.dict" "\${genomeFasta%.*}.dict"
     fi
+
+    if [[ ${params.process_GVCFs == "glNexus"} ]]; then
+        gatk IndexFeatureFile \
+        -I ${combined_gvcf} -O ${combined_gvcf}.idx && \
+        ln -sf ${combined_gvcf}.idx ${combined_gvcf_idx}
+    fi
+
+
 
     gatk GenotypeGVCFs -R "\${genomeFasta}" \
         -V ${combined_gvcf} \

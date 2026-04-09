@@ -22,8 +22,8 @@ process deepVariant {
     """
     echo "Running Deepvariant for Sample: ${bamFile}"
 
-    if [[ -n ${params.genome_file_2} ]]; then
-        genomeFasta=\$(basename ${params.genome_file_2})
+    if [[ -n ${params.genome_file} ]]; then
+        genomeFasta=\$(basename ${params.genome_file})
     else
         genomeFasta=\$(find -L . -name '*.fa')
     fi
@@ -31,8 +31,10 @@ process deepVariant {
     --model_type=WES \
     --ref=\$genomeFasta \
     --reads=${bamFile} \
-    --output_vcf=${sample_id}.vcf.gz \
+    --output_vcf=/tmp/output.vcf.gz \
+    --output_gvcf=${sample_id}.g.vcf.gz \
     --intermediate_results_dir=tmp \
-    --num_shards=4
+    --num_shards=8
     """
     }
+    

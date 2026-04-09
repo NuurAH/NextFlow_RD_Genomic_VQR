@@ -8,7 +8,7 @@ process alignReadsBwaMem2 {
     } else if (params.platform == 'cloud') {
         label 'process_high'
     }
-    container 'custom/bwa-mem2:v2.3'
+    container 'ahnuuur/bwa-mem2:2.3.1'
 
     tag "$sample_id"
 
