@@ -30,6 +30,7 @@ log.info """\
 // Conditionally include modules
 if (params.index_genome) {
     include { indexGenome } from './modules/indexGenome'
+    include { indexGenome2 } from './modules/indexGenome_2'
 }
 if (params.fastqc) {
     include { FASTQC } from './modules/FASTQC'
@@ -95,6 +96,7 @@ workflow {
     else {
         indexed_genome_ch = Channel.fromPath(params.genome_index_files)
     }
+
 
 
 
@@ -357,7 +359,7 @@ workflow variant_calling_only {
     final_vcf_ch = genotypeGVCFs(combined_gvcf_ch, indexed_genome_ch.collect())
     }
     else if (params.process_GVCFs == "glNexus"){
-    final_vcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
+    combined_gvcf_ch = combineGVCFs(all_gvcf_ch, indexed_genome_ch.collect())
     }
 
 }

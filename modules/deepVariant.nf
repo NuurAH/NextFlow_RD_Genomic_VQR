@@ -31,10 +31,9 @@ process deepVariant {
     --model_type=WES \
     --ref=\$genomeFasta \
     --reads=${bamFile} \
-    --output_vcf=/tmp/output.vcf.gz \
+    --output_vcf=tmp/${sample_id}.vcf.gz \
     --output_gvcf=${sample_id}.g.vcf.gz \
     --intermediate_results_dir=tmp \
     --num_shards=8
     """
     }
-    

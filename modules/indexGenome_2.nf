@@ -2,14 +2,14 @@
  * Define the indexGenome process that creates a BWA index
  * given the genome fasta file
  */
-process indexGenome {
+process indexGenome2 {
 
     if (params.platform == 'local') {
         label 'process_low'
     } else if (params.platform == 'cloud') {
         label 'process_medium'
     }
-    container 'custom/bwa-mem2:v2.4'
+    container 'ahnuuur/bwa-mem2:2.3.1'
 
 
     // Publish indexed files to the specified directory
