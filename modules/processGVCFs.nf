@@ -19,10 +19,19 @@ process combineGVCFs {
     def gvcf_files_args = gvcf_files.collect { file -> "-V ${file}" }.join(' ')
 
     """
+    
+    if [[ -n ${params.genome_file} ]]; then
+        genomeFasta=\$(basename ${params.genome_file})
+    else
+        genomeFasta=\$(find -L . -name '*.fasta')
+    fi
+
+    echo "Genome File: \${genomeFasta}"
+
     echo "Combining GVCFs for samples: ${gvcf_files.collect { it.baseName }.join(', ')}"
-
-    genomeFasta="\$(find -L . -name '*.fasta')"
-
+    
+   
+   
     # Ensure dictionary exists
     if [[ -e "\${genomeFasta}.dict" ]]; then
         mv "\${genomeFasta}.dict" "\${genomeFasta%.*}.dict"
@@ -54,8 +63,9 @@ process genotypeGVCFs {
     def merged_sample_id = combined_gvcf.baseName
 
     """
-    echo "Genotyping combined GVCF: ${combined_gvcf.baseName}"
 
+    echo "Genotyping combined GVCF: ${combined_gvcf.baseName}"
+    
     if [[ -n ${params.genome_file} ]]; then
         genomeFasta=\$(basename ${params.genome_file})
     else
@@ -64,10 +74,15 @@ process genotypeGVCFs {
 
     echo "Genome File: \${genomeFasta}"
 
+
+
+    echo "Genome File: \${genomeFasta}"
+
     # Rename the dictionary file to the expected name if it exists
     if [[ -e "\${genomeFasta}.dict" ]]; then
         mv "\${genomeFasta}.dict" "\${genomeFasta%.*}.dict"
     fi
+
 
     gatk GenotypeGVCFs -R "\${genomeFasta}" \
         -V ${combined_gvcf} \
