@@ -5,7 +5,10 @@ process combineGVCFs {
         label 'process_medium'
     }
     container 'ahnuuur/gl-nexus:1.4.1'
+
     tag "${sample_ids.join('_')}" // Add a tag based on the sample IDs
+    
+    publishDir("$params.outdir/VCF", mode: "copy")
 
     input:
     tuple val(sample_ids), path(gvcf_files), path(gvcf_index_files)
@@ -16,6 +19,8 @@ process combineGVCFs {
     script:
     def merged_sample_id = "${sample_ids.join('_')}"
     def gvcf_files_args = gvcf_files.collect { file -> "-V ${file}" }.join(' ')
+
+
 
     """
     echo "Combining GVCFs for samples: ${gvcf_files.collect { it.baseName }.join(', ')}"
@@ -30,7 +35,7 @@ process combineGVCFs {
     bcftools filter -i 'QUAL>=30' ${merged_sample_id}_combined.vcf -Ou | \
     bcftools +setGT -Ou -- -t q -n . -i 'FMT/GQ<20 || FMT/DP<10' | \
     bcftools view -i 'F_MISSING<0.1' -Oz  -o filtered_${merged_sample_id}_combined.vcf.gz &&
-    bcftools index -t ${merged_sample_id}_combined.vcf.gz
+    bcftools index -t filtered_${merged_sample_id}_combined.vcf.gz
     """
 }
 

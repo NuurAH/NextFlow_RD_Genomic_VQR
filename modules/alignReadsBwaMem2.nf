@@ -31,7 +31,7 @@ process alignReadsBwaMem2 {
         if [ -f "${reads[1]}" ]; then
             # Paired-end mode
             bwa-mem2 mem \
-            -t 4 \
+            -t ${task.cpus} \
             -k 16 \
             -M \
             -R "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" \
@@ -39,7 +39,7 @@ process alignReadsBwaMem2 {
         else
             # Single FASTQ mode
             bwa-mem2 mem \
-            -t 4 \
+            -t ${task.cpus} \
             -k 16 \
             -M \
             -R "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" \

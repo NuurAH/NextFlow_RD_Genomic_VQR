@@ -34,6 +34,6 @@ process deepVariant {
     --output_vcf=tmp/${sample_id}.vcf.gz \
     --output_gvcf=${sample_id}.g.vcf.gz \
     --intermediate_results_dir=tmp \
-    --num_shards=8
+    --num_shards=${task.cpus}
     """
     }
