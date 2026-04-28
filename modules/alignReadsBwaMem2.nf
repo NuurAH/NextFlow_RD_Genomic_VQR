@@ -32,7 +32,7 @@ process alignReadsBwaMem2 {
             # Paired-end mode
             bwa-mem2 mem \
             -t ${task.cpus} \
-            -k 16 \
+            -K 100000000 \
             -M \
             -R "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" \
             \$INDEX ${reads[0]} ${reads[1]} | samtools view -b - > ${sample_id}.bam
@@ -40,7 +40,7 @@ process alignReadsBwaMem2 {
             # Single FASTQ mode
             bwa-mem2 mem \
             -t ${task.cpus} \
-            -k 16 \
+            -K 100000000 \
             -M \
             -R "@RG\\tID:${sample_id}\\tSM:${sample_id}\\tPL:illumina" \
             \$INDEX ${reads[0]} | samtools view -b - > ${sample_id}.bam      
