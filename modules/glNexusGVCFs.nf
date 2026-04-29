@@ -32,8 +32,8 @@ process combineGVCFs {
 
     glnexus_cli --config DeepVariant *.g.vcf.gz >  ${merged_sample_id}_combined.vcf.gz &&\
 
-    bcftools filter -i 'QUAL>=20' ${merged_sample_id}_combined.vcf.gz -Ou | \
-    bcftools +setGT -Ou -- -t q -n . -i 'FMT/GQ<20 || FMT/DP<5' | \
+    bcftools filter -i 'QUAL>=10' ${merged_sample_id}_combined.vcf.gz -Ou | \
+    bcftools +setGT -Ou -- -t q -n . -i FMT/DP<3' | \
     bcftools view -i 'F_MISSING<0.3' -Oz  -o filtered_${merged_sample_id}_combined.vcf.gz &&
     bcftools index -t filtered_${merged_sample_id}_combined.vcf.gz
     """
