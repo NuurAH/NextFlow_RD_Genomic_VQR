@@ -18,4 +18,4 @@ LABEL maintainer="Harbi Nuur <Harbi.Nuur@postgrad.manchester.ac.uk>"
 LABEL description="Docker image containing gl-nexus==1.4.1 and bcftools==1.21"
 
 # Default command to run when the container starts
-CMD ["glnexus_cli"]
+CMD ["glnexus_cli", "-l"]
