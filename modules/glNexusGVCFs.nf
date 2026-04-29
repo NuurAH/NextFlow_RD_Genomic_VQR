@@ -30,11 +30,11 @@ process combineGVCFs {
         genomeFasta=\$(find -L . -name '*.fa')
     fi
 
-    glnexus_cli --config DeepVariant *.g.vcf.gz >  ${merged_sample_id}_combined.vcf &&\
+    glnexus_cli --config DeepVariant *.g.vcf.gz >  ${merged_sample_id}_combined.vcf.gz &&\
 
-    bcftools filter -i 'QUAL>=30' ${merged_sample_id}_combined.vcf -Ou | \
-    bcftools +setGT -Ou -- -t q -n . -i 'FMT/GQ<20 || FMT/DP<10' | \
-    bcftools view -i 'F_MISSING<0.1' -Oz  -o filtered_${merged_sample_id}_combined.vcf.gz &&
+    bcftools filter -i 'QUAL>=20' ${merged_sample_id}_combined.vcf.gz -Ou | \
+    bcftools +setGT -Ou -- -t q -n . -i 'FMT/GQ<20 || FMT/DP<5' | \
+    bcftools view -i 'F_MISSING<0.3' -Oz  -o filtered_${merged_sample_id}_combined.vcf.gz &&
     bcftools index -t filtered_${merged_sample_id}_combined.vcf.gz
     """
 }

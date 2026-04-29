@@ -90,15 +90,18 @@ workflow {
     // 
 
     if (params.index_genome){
+        if (params.aligner == "bwa-mem2"){
         // Flatten as is of format [fasta, [rest of files..]]
-        indexed_genome_ch = indexGenome(params.genome_file).flatten()
+        indexed_genome_ch = indexGenome2(params.genome_file).flatten()
     }
+        else {
+        indexed_genome_ch = indexGenome(params.genome_file).flatten()
+        }
+    }
+
     else {
         indexed_genome_ch = Channel.fromPath(params.genome_index_files)
     }
-
-
-
 
     // Create qsrc_vcf_ch channel
     qsrc_vcf_ch = Channel.fromPath(params.qsrVcfs)
