@@ -7,7 +7,7 @@ process indexGenome2 {
     if (params.platform == 'local') {
         label 'process_low'
     } else if (params.platform == 'cloud') {
-        label 'process_medium'
+        label 'process_high'
     }
     container 'ahnuuur/bwa-mem2:2.3.1'
 
